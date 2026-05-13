@@ -328,6 +328,68 @@ impl EasyProjectClient {
         self.parse_response(response)
     }
 
+    /// Get attachment metadata by ID (filename, size, content_url, etc.)
+    pub async fn get_attachment(&self, id: i32) -> ApiResult<crate::api::models::AttachmentResponse> {
+        let url = format!("{}/attachments/{}.json", self.base_url, id);
+        let request = self.add_auth(self.http_client.get(&url));
+        let response = self.execute_request(request).await?;
+        self.parse_response(response)
+    }
+
+    /// Download attachment binary content as raw bytes
+    pub async fn download_attachment(&self, id: i32) -> ApiResult<(Vec<u8>, String, Option<String>)> {
+        // Najdi metadata (potřebujeme filename + content_url)
+        let meta = self.get_attachment(id).await?;
+        let filename = meta.attachment.filename.clone();
+        let content_type = meta.attachment.content_type.clone();
+        let url = meta.attachment.content_url
+            .unwrap_or_else(|| format!("{}/attachments/download/{}/{}", self.base_url, id, filename));
+
+        let request = self.add_auth(self.http_client.get(&url));
+        let response = request.send().await
+            .map_err(crate::api::error::ApiError::from)?;
+        if !response.status().is_success() {
+            return Err(crate::api::error::ApiError::Api {
+                status: response.status().as_u16(),
+                message: format!("Download failed for attachment {}", id),
+            });
+        }
+        let bytes = response.bytes().await
+            .map_err(crate::api::error::ApiError::from)?;
+        Ok((bytes.to_vec(), filename, content_type))
+    }
+
+    /// Add user as watcher of an issue (POST /issues/{id}/watchers.json)
+    pub async fn add_issue_watcher(&self, issue_id: i32, user_id: i32) -> ApiResult<()> {
+        let url = format!("{}/issues/{}/watchers.json", self.base_url, issue_id);
+        let body = crate::api::models::AddWatcherRequest { user_id };
+        let request = self.add_auth(self.http_client.post(&url)).json(&body);
+        let response = request.send().await
+            .map_err(crate::api::error::ApiError::from)?;
+        if !response.status().is_success() {
+            return Err(crate::api::error::ApiError::Api {
+                status: response.status().as_u16(),
+                message: format!("Add watcher {} → issue {} failed", user_id, issue_id),
+            });
+        }
+        Ok(())
+    }
+
+    /// Remove user as watcher (DELETE /issues/{id}/watchers/{user_id}.json)
+    pub async fn remove_issue_watcher(&self, issue_id: i32, user_id: i32) -> ApiResult<()> {
+        let url = format!("{}/issues/{}/watchers/{}.json", self.base_url, issue_id, user_id);
+        let request = self.add_auth(self.http_client.delete(&url));
+        let response = request.send().await
+            .map_err(crate::api::error::ApiError::from)?;
+        if !response.status().is_success() && response.status().as_u16() != 404 {
+            return Err(crate::api::error::ApiError::Api {
+                status: response.status().as_u16(),
+                message: format!("Remove watcher {} from issue {} failed", user_id, issue_id),
+            });
+        }
+        Ok(())
+    }
+
     pub async fn update_issue(&self, id: i32, issue_data: CreateIssueRequest) -> ApiResult<IssueResponse> {
         let url = format!("{}/issues/{}.json", self.base_url, id);
         let request = self.add_auth(self.http_client.put(&url))

@@ -588,6 +588,8 @@ winget install Microsoft.VisualStudio.2022.BuildTools
 ## 📚 Dokumentace
 
 - [**DEPLOYMENT.md**](DEPLOYMENT.md) - Kompletní deployment guide
+- [**CLAUDE-PROMPTS.md**](CLAUDE-PROMPTS.md) - Zjednodušené prompty pro Claude session
+- [**TEAM-CONVENTIONS.md**](TEAM-CONVENTIONS.md) - Sdílená cache IDs (projekty, users, enumerace, režie tickety) + workflow konvence
 - [**API Reference**](src/tools/) - Dokumentace jednotlivých nástrojů
 - [**Swagger API**](easy_swagger.yml) - EasyProject API dokumentace
 

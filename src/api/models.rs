@@ -112,6 +112,48 @@ pub struct Issue {
     pub updated_on: Option<DateTime<Utc>>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub closed_on: Option<DateTime<Utc>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub attachments: Option<Vec<Attachment>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub journals: Option<Vec<Journal>>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct Journal {
+    pub id: i32,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub user: Option<UserReference>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub notes: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub created_on: Option<DateTime<Utc>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub private_notes: Option<bool>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct Attachment {
+    pub id: i32,
+    pub filename: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub filesize: Option<i64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub content_type: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub description: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub content_url: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub thumbnail_url: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub author: Option<UserReference>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub created_on: Option<DateTime<Utc>>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct AttachmentResponse {
+    pub attachment: Attachment,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -381,6 +423,17 @@ pub struct CreateIssue {
     pub due_date: Option<NaiveDate>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub done_ratio: Option<i32>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub watcher_user_ids: Option<Vec<i32>>,
+    /// Redmine journal note — vytvoří se jako komentář v issue history.
+    /// Při PUT /issues/{id} se notes přidá jako journal entry, neovlivní description.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub notes: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct AddWatcherRequest {
+    pub user_id: i32,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

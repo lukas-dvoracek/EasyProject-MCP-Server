@@ -413,3 +413,5 @@ bin/easyproject-mcp-server*
 
 
 *.exe
+deployment/cursor-mcp-config.json
+deployment/cursor-mcp-config.json

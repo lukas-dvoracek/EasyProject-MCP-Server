@@ -84,7 +84,7 @@ impl ToolExecutor for ListIssuesTool {
                 "description": "Dodatečné informace k zahrnutí",
                 "items": {
                     "type": "string",
-                    "enum": ["attachments", "relations", "total_estimated_time", "spent_time", "checklists"]
+                    "enum": ["attachments", "relations", "total_estimated_time", "spent_time", "checklists", "journals", "watchers"]
                 }
             },
             "search": {
@@ -210,7 +210,7 @@ impl ToolExecutor for GetIssueTool {
                 "description": "Dodatečné informace k zahrnutí",
                 "items": {
                     "type": "string",
-                    "enum": ["attachments", "relations", "total_estimated_time", "spent_time", "checklists"]
+                    "enum": ["attachments", "relations", "total_estimated_time", "spent_time", "checklists", "journals", "watchers"]
                 }
             }
         })
@@ -283,6 +283,8 @@ struct CreateIssueArgs {
     due_date: Option<NaiveDate>,
     #[serde(default)]
     done_ratio: Option<i32>,
+    #[serde(default)]
+    watcher_user_ids: Option<Vec<i32>>,
 }
 
 #[async_trait]
@@ -356,10 +358,15 @@ impl ToolExecutor for CreateIssueTool {
                 "description": "Procento dokončení (0-100)",
                 "minimum": 0,
                 "maximum": 100
+            },
+            "watcher_user_ids": {
+                "type": "array",
+                "description": "Pole ID uživatelů přidaných jako pozorovatelé/spolupracovníci. Po úspěšném create se pro každého zavolá POST /issues/{id}/watchers.json (fallback pro Redmine verze, kde watcher_user_ids v body neprojde).",
+                "items": { "type": "integer" }
             }
         })
     }
-    
+
     async fn execute(&self, arguments: Option<Value>) -> Result<CallToolResult, Box<dyn std::error::Error + Send + Sync>> {
         let args: CreateIssueArgs = serde_json::from_value(
             arguments.ok_or("Chybí argumenty pro vytvoření úkolu")?
@@ -367,6 +374,7 @@ impl ToolExecutor for CreateIssueTool {
         
         debug!("Vytvářím nový úkol: {}", args.subject);
         
+        let watcher_ids = args.watcher_user_ids.clone();
         let issue_data = CreateIssueRequest {
             issue: CreateIssue {
                 project_id: args.project_id,
@@ -383,20 +391,40 @@ impl ToolExecutor for CreateIssueTool {
                 start_date: args.start_date,
                 due_date: args.due_date,
                 done_ratio: args.done_ratio,
+                watcher_user_ids: watcher_ids.clone(),
+                notes: None,
             }
         };
-        
+
         match self.api_client.create_issue(issue_data).await {
             Ok(response) => {
+                let issue_id = response.issue.id;
+                let issue_subject = response.issue.subject.clone();
                 let issue_json = serde_json::to_string_pretty(&response.issue)?;
-                info!("Úspěšně vytvořen úkol: {} (ID: {})", response.issue.subject, response.issue.id);
-                
+                info!("Úspěšně vytvořen úkol: {} (ID: {})", issue_subject, issue_id);
+
+                // Fallback: pokud Redmine ignoruje watcher_user_ids v POST body (verze závislé),
+                // přidej watchery přes individuální POST /issues/{id}/watchers.json
+                let mut watcher_notes = String::new();
+                if let Some(ids) = watcher_ids {
+                    for uid in ids {
+                        match self.api_client.add_issue_watcher(issue_id, uid).await {
+                            Ok(_) => watcher_notes.push_str(&format!("\n  + watcher {} přidán", uid)),
+                            Err(e) => {
+                                // 422 znamená že už je watcher (z body field) → ignoruj
+                                let msg = e.to_string();
+                                if !msg.contains("422") {
+                                    watcher_notes.push_str(&format!("\n  ⚠ watcher {} selhalo: {}", uid, e));
+                                }
+                            }
+                        }
+                    }
+                }
+
                 Ok(CallToolResult::success(vec![
                     ToolResult::text(format!(
-                        "Úkol '{}' byl úspěšně vytvořen s ID {}:\n\n{}",
-                        response.issue.subject,
-                        response.issue.id,
-                        issue_json
+                        "Úkol '{}' byl úspěšně vytvořen s ID {}:{}\n\n{}",
+                        issue_subject, issue_id, watcher_notes, issue_json
                     ))
                 ]))
             }
@@ -443,6 +471,18 @@ struct UpdateIssueArgs {
     start_date: Option<NaiveDate>,
     #[serde(default)]
     due_date: Option<NaiveDate>,
+    #[serde(default)]
+    watcher_user_ids: Option<Vec<i32>>,
+    #[serde(default)]
+    fixed_version_id: Option<i32>,
+    #[serde(default)]
+    category_id: Option<i32>,
+    #[serde(default)]
+    parent_issue_id: Option<i32>,
+    #[serde(default)]
+    tracker_id: Option<i32>,
+    #[serde(default)]
+    notes: Option<String>,
 }
 
 #[async_trait]
@@ -500,10 +540,35 @@ impl ToolExecutor for UpdateIssueTool {
                 "type": "string",
                 "format": "date",
                 "description": "Nový termín dokončení (YYYY-MM-DD)"
+            },
+            "fixed_version_id": {
+                "type": "integer",
+                "description": "Nové ID milníku/verze (fixed_version)"
+            },
+            "category_id": {
+                "type": "integer",
+                "description": "Nové ID kategorie"
+            },
+            "parent_issue_id": {
+                "type": "integer",
+                "description": "Nové ID nadřazeného úkolu"
+            },
+            "tracker_id": {
+                "type": "integer",
+                "description": "Nové ID trackeru"
+            },
+            "watcher_user_ids": {
+                "type": "array",
+                "description": "Pole ID uživatelů přidaných jako pozorovatelé. Po update se každý přidá přes POST /issues/{id}/watchers.json. Existující watcher se neduplikuje (422 ignorováno).",
+                "items": { "type": "integer" }
+            },
+            "notes": {
+                "type": "string",
+                "description": "Komentář (journal note) přidán k úkolu. Vytvoří se nový journal entry s autorem = aktuální user, neovlivní description. Podporuje HTML."
             }
         })
     }
-    
+
     async fn execute(&self, arguments: Option<Value>) -> Result<CallToolResult, Box<dyn std::error::Error + Send + Sync>> {
         let args: UpdateIssueArgs = match arguments {
             Some(args) => {
@@ -539,40 +604,59 @@ impl ToolExecutor for UpdateIssueTool {
             }
         };
         
+        let watcher_ids = args.watcher_user_ids.clone();
         let issue_data = CreateIssueRequest {
             issue: CreateIssue {
                 project_id: current_issue.project.id,
-                tracker_id: current_issue.tracker.id,
+                tracker_id: args.tracker_id.unwrap_or(current_issue.tracker.id),
                 status_id: args.status_id.unwrap_or(current_issue.status.id),
                 priority_id: args.priority_id.unwrap_or(current_issue.priority.id),
                 subject: args.subject.unwrap_or(current_issue.subject.clone()),
                 description: args.description.or(current_issue.description),
-                category_id: current_issue.category.map(|c| c.id),
-                fixed_version_id: current_issue.fixed_version.map(|v| v.id),
+                category_id: args.category_id.or(current_issue.category.map(|c| c.id)),
+                fixed_version_id: args.fixed_version_id.or(current_issue.fixed_version.map(|v| v.id)),
                 assigned_to_id: args.assigned_to_id.or(current_issue.assigned_to.map(|u| u.id)),
-                parent_issue_id: current_issue.parent.map(|p| p.id),
+                parent_issue_id: args.parent_issue_id.or(current_issue.parent.map(|p| p.id)),
                 estimated_hours: args.estimated_hours.or(current_issue.estimated_hours),
                 start_date: args.start_date.or(current_issue.start_date),
                 due_date: args.due_date.or(current_issue.due_date),
                 done_ratio: args.done_ratio.or(current_issue.done_ratio),
+                watcher_user_ids: None, // watcherů přidáme samostatně přes POST endpoint
+                notes: args.notes.clone(),
             }
         };
-        
+
         debug!("Odesílám request pro update_issue: {:?}", issue_data);
-        
+
         match self.api_client.update_issue(args.id, issue_data).await {
             Ok(response) => {
                 debug!("Úspěšný response z update_issue API: {:?}", response);
+                let issue_id = response.issue.id;
+                let issue_subject = response.issue.subject.clone();
                 let issue_json = serde_json::to_string_pretty(&response.issue)?;
-                info!("Úspěšně aktualizován úkol: {} (ID: {})", response.issue.subject, response.issue.id);
-                
-                debug!("Vytvářím success CallToolResult pro úkol {}", response.issue.id);
+                info!("Úspěšně aktualizován úkol: {} (ID: {})", issue_subject, issue_id);
+
+                // Přidej watchery (pokud zadáni)
+                let mut watcher_notes = String::new();
+                if let Some(ids) = watcher_ids {
+                    for uid in ids {
+                        match self.api_client.add_issue_watcher(issue_id, uid).await {
+                            Ok(_) => watcher_notes.push_str(&format!("\n  + watcher {} přidán", uid)),
+                            Err(e) => {
+                                let msg = e.to_string();
+                                if !msg.contains("422") {
+                                    watcher_notes.push_str(&format!("\n  ⚠ watcher {} selhalo: {}", uid, e));
+                                }
+                            }
+                        }
+                    }
+                }
+
+                debug!("Vytvářím success CallToolResult pro úkol {}", issue_id);
                 let result = CallToolResult::success(vec![
                     ToolResult::text(format!(
-                        "Úkol '{}' (ID: {}) byl úspěšně aktualizován:\n\n{}",
-                        response.issue.subject,
-                        response.issue.id,
-                        issue_json
+                        "Úkol '{}' (ID: {}) byl úspěšně aktualizován:{}\n\n{}",
+                        issue_subject, issue_id, watcher_notes, issue_json
                     ))
                 ]);
                 debug!("CallToolResult vytvořen s is_error: {:?}", result.is_error);
@@ -649,6 +733,12 @@ impl ToolExecutor for AssignIssueTool {
             estimated_hours: None,
             start_date: None,
             due_date: None,
+            watcher_user_ids: None,
+            fixed_version_id: None,
+            category_id: None,
+            parent_issue_id: None,
+            tracker_id: None,
+            notes: None,
         };
         
         // Delegujeme na UpdateIssueTool
@@ -740,6 +830,12 @@ impl ToolExecutor for CompleteIssueTool {
             estimated_hours: None,
             start_date: None,
             due_date: None,
+            watcher_user_ids: None,
+            fixed_version_id: None,
+            category_id: None,
+            parent_issue_id: None,
+            tracker_id: None,
+            notes: None,
         };
         
         // Delegujeme na UpdateIssueTool

@@ -15,6 +15,7 @@ use super::time_entry_tools::*;
 use super::report_tools::*;
 use super::milestone_tools::*;
 use super::enumeration_tools::*;
+use super::attachment_tools::*;
 
 pub struct ToolRegistry {
     tools: HashMap<String, Arc<dyn ToolExecutor>>,
@@ -61,9 +62,15 @@ impl ToolRegistry {
             tools.insert(complete_issue.name().to_string(), complete_issue);
             tools.insert(get_issue_enumerations.name().to_string(), get_issue_enumerations);
 
-            info!("Registrovány issue tools");
+            // Attachment tools (logicky pod issue, vždy zapnuté)
+            let get_attachment = Arc::new(GetAttachmentTool::new(api_client.clone(), config.clone()));
+            let download_attachment = Arc::new(DownloadAttachmentTool::new(api_client.clone(), config.clone()));
+            tools.insert(get_attachment.name().to_string(), get_attachment);
+            tools.insert(download_attachment.name().to_string(), download_attachment);
+
+            info!("Registrovány issue tools (vč. attachment)");
         }
-        
+
         // User tools
         if config.tools.users.enabled {
             let list_users = Arc::new(ListUsersTool::new(api_client.clone(), config.clone()));

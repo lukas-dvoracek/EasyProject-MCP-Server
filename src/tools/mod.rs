@@ -7,6 +7,7 @@ pub mod time_entry_tools;
 pub mod report_tools;
 pub mod milestone_tools;
 pub mod enumeration_tools;
+pub mod attachment_tools;
 
 pub use registry::ToolRegistry;
-pub use executor::ToolExecutor; 
+pub use executor::ToolExecutor;
