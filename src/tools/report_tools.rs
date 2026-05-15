@@ -120,7 +120,7 @@ impl ToolExecutor for GenerateProjectReportTool {
         
         // 2. Statistiky úkolů (pokud je požadováno)
         if include_issues {
-            match self.api_client.list_issues(Some(args.project_id), Some(1000), None, None, None, None, None, None, None, None, None).await {
+            match self.api_client.list_issues(Some(args.project_id), Some(1000), None, None, None, None, None, None, None, None, None, None).await {
                 Ok(issues_response) => {
                     let issues = &issues_response.issues;
                     
@@ -412,7 +412,7 @@ impl ToolExecutor for GetDashboardDataTool {
         }
         
         // 2. Přehled úkolů
-        match self.api_client.list_issues(None, Some(1000), None, None, None, None, None, None, None, None, None).await {
+        match self.api_client.list_issues(None, Some(1000), None, None, None, None, None, None, None, None, None, None).await {
             Ok(issues_response) => {
                 let mut issues = issues_response.issues;
                 

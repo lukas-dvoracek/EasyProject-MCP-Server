@@ -42,6 +42,8 @@ struct ListIssuesArgs {
     tracker_id: Option<i32>,
     #[serde(default)]
     priority_id: Option<i32>,
+    #[serde(default)]
+    fixed_version_id: Option<i32>,
 }
 
 #[async_trait]
@@ -110,6 +112,10 @@ impl ToolExecutor for ListIssuesTool {
             "priority_id": {
                 "type": "integer",
                 "description": "ID priority úkolu (např. 1=Nízká, 2=Normální, 3=Vysoká, 4=Urgentní)"
+            },
+            "fixed_version_id": {
+                "type": "integer",
+                "description": "ID milníku (fixed_version / version) pro filtrování úkolů v daném milníku"
             }
         })
     }
@@ -129,6 +135,7 @@ impl ToolExecutor for ListIssuesTool {
                 status_id: None,
                 tracker_id: None,
                 priority_id: None,
+                fixed_version_id: None,
             }
         };
 
@@ -145,7 +152,8 @@ impl ToolExecutor for ListIssuesTool {
             args.assigned_to_id,
             args.status_id,
             args.tracker_id,
-            args.priority_id
+            args.priority_id,
+            args.fixed_version_id
         ).await {
             Ok(response) => {
                 let issues_json = serde_json::to_string_pretty(&response)?;

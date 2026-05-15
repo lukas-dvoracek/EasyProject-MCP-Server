@@ -2,7 +2,7 @@
 
 Sdílený soubor pro Claude Code uživatele v PDSOFT. Obsahuje cache základních seznamů z EP API (project IDs, user IDs, enumerace, sběrné tickety) + workflow konvence, aby Claude nemusel pro každé volání tahat `list_*` z API.
 
-> **Snapshot:** 2026-05-13. Při rozporu vůči EP UI je autoritativní EP — proveď refresh přes příslušný `list_*` tool a aktualizuj tento soubor.
+> **Snapshot:** 2026-05-14. Při rozporu vůči EP UI je autoritativní EP — proveď refresh přes příslušný `list_*` tool a aktualizuj tento soubor.
 
 ---
 
@@ -40,6 +40,25 @@ Doplňuj iniciály postupně, jak je narazíš v `author`/`assigned_to` polích 
 | `activity_id` (time entry) | 129 (Programování) / 130 (Schůzka) | dle kontextu             |
 
 **Watcher konvence:** Při vytváření/úpravě úkolu vždy přidej `126` (JV) do `watcher_user_ids`. Dohodnuto napříč týmem.
+
+### Filtrování podle milníku
+
+`list_issues` podporuje od **2026-05-14** parametr `fixed_version_id` (ID milníku/verze). Příklad:
+
+```
+list_issues(project_id=175, fixed_version_id=230)
+```
+
+Vrátí pouze úkoly v daném milníku — daleko levnější než stahovat celý projekt a filtrovat lokálně.
+
+### KubiQ workflow — done flow
+
+Po dokončení KubiQ úkolu:
+- `status_id = 9` (Testování)
+- `assigned_to_id = 126` (JV — testuje)
+- `done_ratio = 100`
+
+> **Pozn.:** Některé status transitions může workflow blokovat (např. Realizace → Testování bez schválení). Pokud `update_issue` projde tiše bez efektu, přepni v EP UI ručně.
 
 ---
 

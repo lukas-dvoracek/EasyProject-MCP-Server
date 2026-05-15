@@ -252,7 +252,7 @@ impl ToolExecutor for GetUserWorkloadTool {
         };
         
         // 2. Získáme přiřazené úkoly uživatele
-        let issues_response = match self.api_client.list_issues(None, Some(100), None, None, None, None, None, None, None, None, None).await {
+        let issues_response = match self.api_client.list_issues(None, Some(100), None, None, None, None, None, None, None, None, None, None).await {
             Ok(response) => response,
             Err(e) => {
                 error!("Chyba při získávání úkolů: {}", e);
