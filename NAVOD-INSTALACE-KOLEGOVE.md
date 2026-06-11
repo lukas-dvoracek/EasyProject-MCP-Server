@@ -1,128 +1,104 @@
-# EasyProject MCP — návod na instalaci a používání (pro kolegy)
+# EasyProject MCP — automatická instalace přes Claude Code
 
-Tento návod popisuje, jak si připojit EasyProject (https://ep.pdsoft.eu) do Claude Code pomocí MCP serverů, a jak je pak používat. Existují **dva** MCP servery a doporučujeme mít zaregistrované oba:
+## Pro člověka (přečti si jen tohle)
 
-| Server | Typ | K čemu slouží |
-|---|---|---|
-| **easy8** | HTTP (bez instalace) | Práce s úkoly — výpis, čtení, vytváření, úpravy, komentáře, seznam projektů |
-| **easyproject** | lokální program (stdio) | Vše ostatní — logování času, time entries, milníky, uživatelé, přílohy, dashboard, reporty |
+1. Měj nainstalovaný Claude Code (`claude --version` v terminálu).
+2. Získej si svůj API klíč: přihlas se na https://ep.pdsoft.eu → vpravo nahoře profil → **Můj účet** → vpravo **API přístupový klíč** → **Zobrazit** → zkopíruj.
+   ⚠️ Klíč je osobní — nesdílej ho, vše v EP se pak děje pod tvým jménem.
+3. Zkopíruj si k sobě tento soubor (nic dalšího není potřeba — program serveru si Claude stáhne sám z GitHubu).
+4. Spusť `claude` a napiš:
 
----
+   > Přečti soubor NAVOD-INSTALACE-KOLEGOVE.md a nastav mi podle něj EasyProject MCP.
 
-## 1. Předpoklady
-
-- Nainstalovaný **Claude Code** (CLI). Ověření: v terminálu spusť `claude --version`.
-- Účet v EasyProject na https://ep.pdsoft.eu s vlastním API klíčem.
-
-### Získání vlastního API klíče
-
-1. Přihlas se na https://ep.pdsoft.eu
-2. Vpravo nahoře klikni na svůj profil → **Můj účet**
-3. V pravém panelu najdi **API přístupový klíč** (API access key) → **Zobrazit**
-4. Klíč si zkopíruj — budeš ho potřebovat v dalších krocích.
-
-⚠️ **Klíč je osobní — nesdílej ho a nedávej do gitu.** Všechny akce v EP se pak dějí pod tvým jménem.
+5. Claude se tě zeptá na API klíč a vše nastaví. Na konci restartuj Claude Code a ověř příkazem `/mcp`.
 
 ---
 
-## 2. Instalace serveru „easy8" (jednoduchá, doporučený start)
+## Pro Claude (instrukce k provedení)
 
-Nic se nestahuje — server běží přímo na ep.pdsoft.eu. Stačí jeden příkaz v terminálu (ve složce, kde používáš Claude Code, nebo s `--scope user` pro všechny projekty):
+Jsi Claude Code a máš uživateli nastavit dva MCP servery pro EasyProject (https://ep.pdsoft.eu). Postupuj přesně podle kroků níže. Příkazy spouštěj sám přes Bash; uživatele se ptej jen na to, co znát nemůžeš.
+
+### Krok 0 — Zjisti vstupy
+
+1. Zeptej se uživatele na jeho **EasyProject API klíč** (40znakový hex řetězec z Můj účet → API přístupový klíč). Bez něj nepokračuj. Klíč nikdy nevypisuj zpět do konverzace ani ho nedávej do gitu.
+2. Zjisti platformu: spusť `uname -a 2>/dev/null || ver`. WSL poznáš podle „microsoft" ve výstupu uname; čisté Windows podle toho, že uname neexistuje.
+3. Obstarej binárky serveru ze složky `deployment/`:
+   - **Pokud složka `deployment/` leží vedle tohoto souboru**, použij ji.
+   - **Jinak stáhni repo z GitHubu** (veřejné):
+     ```bash
+     git clone --depth 1 https://github.com/lukas-dvoracek/EasyProject-MCP-Server.git /tmp/ep-mcp
+     ```
+     Binárky pak najdeš v `/tmp/ep-mcp/deployment/`. Bez gitu lze stáhnout i přímo:
+     ```bash
+     curl -L -o easyproject-mcp-server-linux https://github.com/lukas-dvoracek/EasyProject-MCP-Server/raw/main/deployment/easyproject-mcp-server-linux
+     curl -L -o easyproject-mcp-server.exe https://github.com/lukas-dvoracek/EasyProject-MCP-Server/raw/main/deployment/easyproject-mcp-server.exe
+     ```
+   Obsah `deployment/`:
+   - `easyproject-mcp-server-linux` (Linux/WSL build)
+   - `easyproject-mcp-server.exe` (Windows build)
+
+### Krok 1 — Registruj server „easy8" (HTTP, bez instalace)
 
 ```bash
-claude mcp add --transport http easy8 https://ep.pdsoft.eu/mcp --header "X-Redmine-API-Key: TVŮJ_API_KLÍČ"
+claude mcp add --scope user --transport http easy8 https://ep.pdsoft.eu/mcp --header "X-Redmine-API-Key: <KLÍČ>"
 ```
 
-Pak restartuj Claude Code session. Ověření: v Claude Code napiš `/mcp` — easy8 by měl být ve výpisu jako connected.
+Pokud už `easy8` existuje (`claude mcp list`), přeskoč.
 
-**Dostupné nástroje (6):**
-- `easy8_issues_list` — výpis úkolů (filtry: projekt, přiřazený, status…)
-- `easy8_issues_get` — detail úkolu
-- `easy8_issues_create` — nový úkol
-- `easy8_issues_update` — úprava úkolu (status, přiřazení, komentář)
-- `easy8_issues_comments_list` — komentáře úkolu
-- `easy8_projects_list` — seznam projektů
+### Krok 2 — Nainstaluj a registruj server „easyproject" (lokální binárka)
 
----
-
-## 3. Instalace serveru „easyproject" (plný — logování času atd.)
-
-Tento server je lokální program (Rust). Hotové binárky jsou v tomto repu ve složce `deployment/`:
-
-- `easyproject-mcp-server.exe` — Windows
-- `easyproject-mcp-server-linux` — Linux / WSL
-
-### 3a. Windows (nativní Claude Code ve Windows)
-
-1. Zkopíruj si `deployment\easyproject-mcp-server.exe` někam k sobě, např. `C:\Tools\easyproject-mcp\`.
-2. Zaregistruj server (PowerShell / cmd):
-
-```bash
-claude mcp add easyproject --env EASYPROJECT_API_KEY=TVŮJ_API_KLÍČ --env EASYPROJECT_BASE_URL=https://ep.pdsoft.eu/ -- C:\Tools\easyproject-mcp\easyproject-mcp-server.exe
-```
-
-### 3b. Linux / WSL
-
-1. Zkopíruj si binárku a vytvoř wrapper skript (drží API klíč mimo registraci):
+**Linux / WSL:**
 
 ```bash
 mkdir -p ~/easyproject-mcp
-cp /cesta/k/repu/deployment/easyproject-mcp-server-linux ~/easyproject-mcp/
+cp <cesta-k-deployment>/easyproject-mcp-server-linux ~/easyproject-mcp/
 chmod +x ~/easyproject-mcp/easyproject-mcp-server-linux
-
-cat > ~/easyproject-mcp/wrapper.sh << 'EOF'
-#!/bin/bash
-export EASYPROJECT_API_KEY=TVŮJ_API_KLÍČ
-export EASYPROJECT_BASE_URL=https://ep.pdsoft.eu/
-exec ~/easyproject-mcp/easyproject-mcp-server-linux
-EOF
-chmod +x ~/easyproject-mcp/wrapper.sh
 ```
 
-2. Otevři `~/easyproject-mcp/wrapper.sh` a nahraď `TVŮJ_API_KLÍČ` svým klíčem.
-3. Zaregistruj:
+Vytvoř `~/easyproject-mcp/wrapper.sh` s tímto obsahem (dosaď skutečný klíč):
 
 ```bash
-claude mcp add easyproject -- ~/easyproject-mcp/wrapper.sh
+#!/bin/bash
+export EASYPROJECT_API_KEY=<KLÍČ>
+export EASYPROJECT_BASE_URL=https://ep.pdsoft.eu/
+exec "$HOME/easyproject-mcp/easyproject-mcp-server-linux"
 ```
 
-4. Restartuj Claude Code session a ověř přes `/mcp`.
+Pak `chmod +x ~/easyproject-mcp/wrapper.sh` a registruj:
 
-**Dostupné nástroje (~27):** list/get/create/update/delete_project, list/get/create/update_issue, assign_issue, complete_task, list/get_user, get_user_workload, list/get/create/update/delete_time_entry, **log_time**, list/get/create/update/delete_milestone, get_attachment, download_attachment, generate_project_report, get_dashboard_data, get_issue_enumerations.
+```bash
+claude mcp add --scope user easyproject -- "$HOME/easyproject-mcp/wrapper.sh"
+```
 
----
+**Windows (nativní):**
 
-## 4. Jak se to používá
+```powershell
+mkdir C:\Tools\easyproject-mcp 2>$null
+copy <cesta-k-deployment>\easyproject-mcp-server.exe C:\Tools\easyproject-mcp\
+claude mcp add --scope user easyproject --env EASYPROJECT_API_KEY=<KLÍČ> --env EASYPROJECT_BASE_URL=https://ep.pdsoft.eu/ -- C:\Tools\easyproject-mcp\easyproject-mcp-server.exe
+```
 
-V Claude Code prostě piš česky, co chceš — Claude si zvolí správný nástroj. Příklady:
+⚠️ Upozorni uživatele: Windows EXE je build z 2026-05-04 — neobsahuje nástroje `get_attachment`/`download_attachment`. Vše ostatní funguje.
 
-- „Vypiš moje otevřené úkoly v EasyProjectu."
-- „Ukaž mi detail úkolu 206401 včetně komentářů."
-- „Založ úkol *Oprava tisku* v projektu KubiQ, přiřaď ho mně."
-- „Přepni úkol 206290 do stavu Testování."
-- „Zaloguj 2 hodiny na úkol 205787, aktivita Programování, popis: oprava exportu."
-- „Kolik hodin jsem tento týden vykázal?"
+### Krok 3 — Ověř a předej uživateli
 
-### Dělba práce mezi servery (důležité)
+1. Spusť `claude mcp list` a zkontroluj, že `easy8` i `easyproject` jsou zaregistrované.
+2. Řekni uživateli, ať **restartuje Claude Code** (ukončit a spustit znovu) — MCP servery se načítají při startu.
+3. Po restartu ať ověří příkazem `/mcp` — oba servery mají být „connected". Funkční test: „Vypiš moje otevřené úkoly v EasyProjectu."
 
-- **Úkoly (čtení, vytváření, změna statusu/přiřazení)** → **easy8** (`easy8_issues_*`). Je spolehlivější — starý server `update_issue` umí tiše zahodit změnu statusu/assignee.
-- **Logování času, time entries, milníky, uživatelé, přílohy, reporty** → **easyproject** (easy8 tohle neumí).
+### Krok 4 — Předej pravidla používání
 
-### Užitečné konstanty
+Na závěr uživateli stručně shrň:
 
-- Aktivity pro logování času: **Programování = 129**, **Schůzka = 130** (povinný parametr u `log_time`).
-- ID uživatelů a další konvence: viz `TEAM-CONVENTIONS.md` v tomto repu.
+- **Úkoly (výpis, detail, vytvoření, změna statusu/přiřazení, komentáře)** → nástroje `easy8_issues_*`. Důvod: starý server `update_issue` umí tiše zahodit změnu statusu/assignee.
+- **Logování času, time entries, milníky, uživatelé, přílohy, reporty, dashboard** → nástroje `mcp__easyproject__*` (easy8 tohle neumí).
+- Aktivity pro `log_time`: **Programování = 129**, **Schůzka = 130** (povinný parametr).
+- `watcher_user_ids` u create/update nepoužívat (bug — text skončí v popisu úkolu); watchery přidávat ručně v EP webu.
+- Komentáře a time entries psát krátké (1–3 věty, srozumitelné i neprogramátorům), bez interních cest a detailů.
+- Další konvence: `TEAM-CONVENTIONS.md` v repu EasyProject-MCP-Server.
 
-### Známé mouchy starého serveru (easyproject)
+### Řešení problémů
 
-- `update_issue` může tiše ignorovat změnu statusu/assignee (komentář projde) → na statusy používej `easy8_issues_update`.
-- Parametr `watcher_user_ids` u create/update nefunguje správně (text skončí v popisu) → watchery přidávej ručně v EP webu.
-
----
-
-## 5. Řešení problémů
-
-- **Server se nepřipojí** → `/mcp` v Claude Code ukáže stav; zkontroluj API klíč a u Linux binárky `chmod +x`.
-- **401/403 odpovědi** → špatný nebo expirovaný API klíč; vygeneruj nový v Můj účet.
-- **Odregistrování:** `claude mcp remove easy8` / `claude mcp remove easyproject`.
-- Registrace se ukládají do `~/.claude.json`; `claude mcp list` vypíše, co máš zaregistrované.
+- `/mcp` ukazuje „failed" → zkontroluj API klíč; u Linux binárky `chmod +x`; zkus binárku spustit ručně, zda se nehlásí chybějící knihovny.
+- 401/403 z EP → špatný klíč; vygenerovat nový v Můj účet.
+- Odregistrace: `claude mcp remove easy8` / `claude mcp remove easyproject`.
