@@ -4,7 +4,13 @@ Návod pro připojení **obou** EasyProject MCP serverů (`easy8` + `easyproject
 
 ## Pro člověka (přečti si jen tohle)
 
-1. Měj nainstalovaný Claude Code — ověř v terminálu: `claude --version`.
+1. Nainstaluj Claude Code — otevři **PowerShell** a spusť:
+
+   ```powershell
+   irm https://claude.ai/install.ps1 | iex
+   ```
+
+   Pak PowerShell zavři, otevři nový a ověř: `claude --version`. Při prvním spuštění `claude` se přihlas přes prohlížeč svým Claude účtem (placený plán) — volba **Claude account with subscription**.
 2. Získej si svůj API klíč: přihlas se na https://ep.pdsoft.eu → vpravo nahoře profil → **Můj účet** → vpravo **API přístupový klíč** → **Zobrazit** → zkopíruj.
    ⚠️ Klíč je osobní — nesdílej ho, vše v EP se pak děje pod tvým jménem.
 3. Zkopíruj si k sobě tento soubor (nic dalšího není potřeba — program serveru si Claude stáhne sám z GitHubu).
@@ -13,6 +19,7 @@ Návod pro připojení **obou** EasyProject MCP serverů (`easy8` + `easyproject
    > Přečti soubor NAVOD-MCP-EP-WIN.md a nastav mi podle něj EasyProject MCP.
 
 5. Claude se tě zeptá na API klíč a vše nastaví. Na konci restartuj Claude Code a ověř příkazem `/mcp`.
+6. (Volitelné, ale šikovné) Nech si od Claude vytvořit zástupce na ploše pro rychlé spuštění — viz Krok 5 níže. Pak stačí dvojklik (případně si ho připni na hlavní panel).
 
 ---
 
@@ -23,8 +30,9 @@ Jsi Claude Code na **Windows** a máš uživateli nastavit dva MCP servery pro E
 ### Krok 0 — Zjisti vstupy
 
 1. Zeptej se uživatele na jeho **EasyProject API klíč** (40znakový hex řetězec z Můj účet → API přístupový klíč). Bez něj nepokračuj. Klíč nikdy nevypisuj zpět do konverzace ani ho nedávej do gitu.
-2. Zkontroluj existující registrace: `claude mcp list`. Pokud už `easy8` nebo `easyproject` existují a fungují, příslušný krok přeskoč.
-3. Obstarej Windows binárku serveru:
+2. Zeptej se uživatele, **v jaké složce chce pracovat a vytvářet projekty** (např. `D:\Projekty\Claude`). Pokud neexistuje, se souhlasem ji vytvoř (`New-Item -ItemType Directory -Force <cesta>`). Použiješ ji v Kroku 5 jako startovní složku zástupce.
+3. Zkontroluj existující registrace: `claude mcp list`. Pokud už `easy8` nebo `easyproject` existují a fungují, příslušný krok přeskoč.
+4. Obstarej Windows binárku serveru:
    - **Pokud složka `deployment\` leží vedle tohoto souboru**, použij `deployment\easyproject-mcp-server.exe`.
    - **Jinak stáhni z GitHubu** (veřejné repo):
      ```powershell
@@ -71,6 +79,27 @@ Na závěr uživateli stručně shrň:
 - `watcher_user_ids` u create/update nepoužívat (bug — text skončí v popisu úkolu); watchery přidávat ručně v EP webu.
 - Komentáře a time entries psát krátké (1–3 věty, srozumitelné i neprogramátorům), bez interních cest a detailů.
 - Další konvence: `TEAM-CONVENTIONS.md` v repu EasyProject-MCP-Server.
+
+### Krok 5 — Zástupce pro rychlé spuštění (volitelné)
+
+Nabídni uživateli vytvoření zástupce na ploše, který rovnou otevře PowerShell s běžícím Claude v jeho projektové složce. Se souhlasem spusť (za `<PROJEKTOVÁ-SLOŽKA>` dosaď složku z Kroku 0, bod 2):
+
+```powershell
+$ws = New-Object -ComObject WScript.Shell
+$s = $ws.CreateShortcut("$env:USERPROFILE\Desktop\Claude.lnk")
+$s.TargetPath = "$env:SystemRoot\System32\WindowsPowerShell\v1.0\powershell.exe"
+$s.Arguments = '-NoExit -Command claude'
+$s.WorkingDirectory = '<PROJEKTOVÁ-SLOŽKA>'
+$s.Save()
+```
+
+Poznámky:
+- `WorkingDirectory` = složka, kde Claude Code po spuštění startuje a kde bude vytvářet projekty. Ověř, že existuje.
+- Ruční alternativa: pravý klik na plochu → **Nový → Zástupce** → do umístění vložit:
+  ```
+  %SystemRoot%\System32\WindowsPowerShell\v1.0\powershell.exe -NoExit -Command claude
+  ```
+  → pojmenovat „Claude". Pak pravý klik na zástupce → **Vlastnosti** → pole **Spustit v:** nastavit na projektovou složku. Případně pravý klik → **Připnout na hlavní panel**.
 
 ### Řešení problémů
 
