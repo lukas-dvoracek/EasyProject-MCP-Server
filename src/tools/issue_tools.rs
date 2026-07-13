@@ -44,6 +44,8 @@ struct ListIssuesArgs {
     priority_id: Option<i32>,
     #[serde(default)]
     fixed_version_id: Option<i32>,
+    #[serde(default)]
+    easy_sprint_id: Option<i32>,
 }
 
 #[async_trait]
@@ -116,6 +118,10 @@ impl ToolExecutor for ListIssuesTool {
             "fixed_version_id": {
                 "type": "integer",
                 "description": "ID milníku (fixed_version / version) pro filtrování úkolů v daném milníku"
+            },
+            "easy_sprint_id": {
+                "type": "integer",
+                "description": "ID agile sprintu (Easy Scrum board) pro filtrování úkolů v daném sprintu. ID sprintu zjistíte z pole easy_sprint u úkolu (get_issue/list_issues)."
             }
         })
     }
@@ -136,6 +142,7 @@ impl ToolExecutor for ListIssuesTool {
                 tracker_id: None,
                 priority_id: None,
                 fixed_version_id: None,
+                easy_sprint_id: None,
             }
         };
 
@@ -153,7 +160,8 @@ impl ToolExecutor for ListIssuesTool {
             args.status_id,
             args.tracker_id,
             args.priority_id,
-            args.fixed_version_id
+            args.fixed_version_id,
+            args.easy_sprint_id
         ).await {
             Ok(response) => {
                 let issues_json = serde_json::to_string_pretty(&response)?;

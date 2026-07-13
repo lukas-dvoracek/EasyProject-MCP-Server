@@ -95,6 +95,12 @@ pub struct Issue {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub fixed_version: Option<Version>,
     #[serde(skip_serializing_if = "Option::is_none")]
+    pub easy_sprint: Option<EasySprint>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub easy_sprint_phase: Option<i32>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub easy_sprint_position: Option<i32>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub parent: Option<IssueReference>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub estimated_hours: Option<f64>,
@@ -185,6 +191,17 @@ pub struct Priority {
 pub struct IssueCategory {
     pub id: i32,
     pub name: String,
+}
+
+/// Agile sprint (Easy Scrum board) — vrací se v issue jako easy_sprint
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct EasySprint {
+    pub id: i32,
+    pub name: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub start_date: Option<NaiveDate>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub due_date: Option<NaiveDate>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

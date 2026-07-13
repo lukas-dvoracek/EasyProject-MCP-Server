@@ -241,8 +241,8 @@ impl EasyProjectClient {
 
     // === ISSUE API METHODS ===
 
-    pub async fn list_issues(&self, project_id: Option<i32>, limit: Option<u32>, offset: Option<u32>, include: Option<Vec<String>>, easy_query_q: Option<String>, set_filter: Option<bool>, sort: Option<String>, assigned_to_id: Option<i32>, status_id: Option<i32>, tracker_id: Option<i32>, priority_id: Option<i32>, fixed_version_id: Option<i32>) -> ApiResult<IssuesResponse> {
-        let cache_key = format!("issues_{}_{}_{}_{}_{}_{}_{}_{}_{}_{}_{}_{}",
+    pub async fn list_issues(&self, project_id: Option<i32>, limit: Option<u32>, offset: Option<u32>, include: Option<Vec<String>>, easy_query_q: Option<String>, set_filter: Option<bool>, sort: Option<String>, assigned_to_id: Option<i32>, status_id: Option<i32>, tracker_id: Option<i32>, priority_id: Option<i32>, fixed_version_id: Option<i32>, easy_sprint_id: Option<i32>) -> ApiResult<IssuesResponse> {
+        let cache_key = format!("issues_{}_{}_{}_{}_{}_{}_{}_{}_{}_{}_{}_{}_{}",
             project_id.map(|id| id.to_string()).unwrap_or_else(|| "all".to_string()),
             limit.unwrap_or(25),
             offset.unwrap_or(0),
@@ -254,7 +254,8 @@ impl EasyProjectClient {
             status_id.unwrap_or(0),
             tracker_id.unwrap_or(0),
             priority_id.unwrap_or(0),
-            fixed_version_id.unwrap_or(0)
+            fixed_version_id.unwrap_or(0),
+            easy_sprint_id.unwrap_or(0)
         );
 
         self.get_cached_or_fetch(&cache_key, "issue", async {
@@ -297,6 +298,9 @@ impl EasyProjectClient {
             }
             if let Some(fixed_version_id) = fixed_version_id {
                 query_params.push(("fixed_version_id", fixed_version_id.to_string()));
+            }
+            if let Some(easy_sprint_id) = easy_sprint_id {
+                query_params.push(("easy_sprint_id", easy_sprint_id.to_string()));
             }
 
             let request = self.add_auth(self.http_client.get(&url))
@@ -724,6 +728,7 @@ impl EasyProjectClient {
                 project_id,
                 Some(limit),
                 Some(offset),
+                None,
                 None,
                 None,
                 None,
