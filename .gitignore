@@ -414,3 +414,8 @@ bin/easyproject-mcp-server*
 
 *.exe
 deployment/cursor-mcp-config.json
+# Rust build artefakty (cargo target dir) — binarky pro distribuci jsou v deployment/ (force-added)
+/target/
+
+# Zalohy binarek pred deployem (dela scripts/build-windows.ps1)
+/temp_bac/
