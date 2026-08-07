@@ -51,6 +51,16 @@ list_issues(project_id=175, fixed_version_id=230)
 
 Vrátí pouze úkoly v daném milníku — daleko levnější než stahovat celý projekt a filtrovat lokálně.
 
+### Filtrování podle agile sprintu
+
+`list_issues` podporuje od **2026-07-13** parametr `easy_sprint_id` (ID sprintu ze Scrum boardu). ID sprintu zjistíš z pole `easy_sprint` u úkolu (`get_issue` / `list_issues`). Příklad:
+
+```
+list_issues(project_id=175, easy_sprint_id=42)
+```
+
+Vrátí úkoly zařazené v daném sprintu — základ pro „na čem dnes dělat" bez ručního čtení boardu.
+
 ### KubiQ workflow — done flow
 
 Po dokončení KubiQ úkolu:

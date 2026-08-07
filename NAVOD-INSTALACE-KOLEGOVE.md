@@ -78,7 +78,7 @@ copy <cesta-k-deployment>\easyproject-mcp-server.exe C:\Tools\easyproject-mcp\
 claude mcp add --scope user easyproject --env EASYPROJECT_API_KEY=<KLÍČ> --env EASYPROJECT_BASE_URL=https://ep.pdsoft.eu/ -- C:\Tools\easyproject-mcp\easyproject-mcp-server.exe
 ```
 
-Pozn.: Windows EXE (build 2026-06-11, MSVC) i Linux binárka obsahují plnou sadu 30 nástrojů včetně `get_attachment`/`download_attachment`.
+Pozn.: Windows EXE (build 2026-07-13, MSVC) i Linux binárka (build 2026-08-07) obsahují plnou sadu 30 nástrojů včetně `get_attachment`/`download_attachment` a filtrů `fixed_version_id` (milník) a `easy_sprint_id` (agile sprint).
 
 ### Krok 3 — Ověř a předej uživateli
 
